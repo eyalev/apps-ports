@@ -7,6 +7,7 @@ A CLI tool to find and stop applications using specific ports. Never get "port a
 - 🔍 **List all processes** using network ports
 - 🎯 **Check specific port** usage
 - ⚡ **Kill processes** using ports with confirmation
+- 🐳 **Docker container support** - Kill Docker containers instead of just processes
 - 📊 **Nice table output** with process details
 - 🔒 **Safe operation** with user confirmation
 - 🛡️ **Sudo fallback** for protected processes
@@ -66,6 +67,18 @@ apps-ports --kill 3000
 # or
 apps-ports -k 3000
 ```
+
+### Kill Docker container using a specific port
+For Docker containers running on ports (detected via docker-proxy processes):
+```bash
+apps-ports -k 8080 --kill-docker-container
+```
+
+This will:
+1. Detect if the process is a docker-proxy
+2. Find the associated Docker container
+3. Stop the entire container instead of just killing the proxy process
+4. Optionally remove the stopped container
 
 The tool will:
 1. Show you which process is using the port
