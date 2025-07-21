@@ -1,0 +1,10 @@
+[package]
+name = "stop-app-with-port"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+crossterm = "0.27"
+tabled = "0.15"
