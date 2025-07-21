@@ -1,4 +1,4 @@
-# stop-app-with-port
+# apps-ports
 
 A CLI tool to find and stop applications using specific ports. Never get "port already in use" errors again!
 
@@ -15,7 +15,7 @@ A CLI tool to find and stop applications using specific ports. Never get "port a
 
 ### Pre-built Binaries (Recommended)
 
-Download the latest binary for your platform from the [releases page](https://github.com/eyalev/stop-app-with-port/releases):
+Download the latest binary for your platform from the [releases page](https://github.com/eyalev/apps-ports/releases):
 
 - Linux x86_64
 - macOS (Intel)
@@ -26,11 +26,11 @@ Download the latest binary for your platform from the [releases page](https://gi
 
 ```bash
 # Install from GitHub
-cargo install --git https://github.com/eyalev/stop-app-with-port
+cargo install --git https://github.com/eyalev/apps-ports
 
 # Or clone and build locally
-git clone https://github.com/eyalev/stop-app-with-port
-cd stop-app-with-port
+git clone https://github.com/eyalev/apps-ports
+cd apps-ports
 cargo install --path .
 ```
 
@@ -38,9 +38,9 @@ cargo install --path .
 
 ### List all processes using ports
 ```bash
-stop-app-with-port
+apps-ports
 # or
-stop-app-with-port --list
+apps-ports --list
 ```
 
 Example output:
@@ -55,16 +55,16 @@ Example output:
 
 ### Check which process is using a specific port
 ```bash
-stop-app-with-port --port 3000
+apps-ports --port 3000
 # or
-stop-app-with-port -p 3000
+apps-ports -p 3000
 ```
 
 ### Kill process using a specific port
 ```bash
-stop-app-with-port --kill 3000
+apps-ports --kill 3000
 # or
-stop-app-with-port -k 3000
+apps-ports -k 3000
 ```
 
 The tool will:
@@ -75,7 +75,7 @@ The tool will:
 
 ### Help
 ```bash
-stop-app-with-port --help
+apps-ports --help
 ```
 
 ## How it works
