@@ -91,20 +91,91 @@ The tool will:
 apps-ports --help
 ```
 
+## Output Formats
+
+The tool offers multiple output formats for different use cases:
+
+### Table Format (default)
+```bash
+apps-ports -p 3000
+```
+Displays results in a formatted table with columns for port, PID, process name, command, Docker ID, and Docker image.
+
+### Simple Format (`-s` or `--simple`) - **Recommended for terminals**
+```bash
+apps-ports -p 3000 --simple
+```
+**Output:** `3000:12264 node (node server.js)`
+
+One-line format perfect for terminal viewing, especially with long data.
+
+### Compact Format (`-c` or `--compact`)
+```bash
+apps-ports -p 3000 --compact
+```
+Multi-line detailed view with clear labeling.
+
+### JSON Format (`-j` or `--json`)
+```bash
+apps-ports -p 3000 --json
+```
+Perfect for scripting and automation.
+
+## Running with Elevated Privileges
+
+Many processes (especially Docker containers) run with elevated privileges and require `sudo` to see process details.
+
+### System-wide Installation (Recommended)
+Install the tool system-wide so it's available to both your user and `sudo`:
+
+```bash
+# Install system-wide
+sudo cp ~/.local/bin/apps-ports /usr/local/bin/
+
+# Now you can use with sudo
+sudo apps-ports -p 8080 --simple
+```
+
+### Alternative Methods
+If you can't install system-wide, use these alternatives:
+
+```bash
+# Method 1: Use full path with sudo
+sudo ~/.local/bin/apps-ports -p 8080
+
+# Method 2: Preserve environment PATH
+sudo env PATH=$PATH apps-ports -p 8080
+```
+
+### Docker Container Detection
+When processes show `(elevated privileges required)`, they're often Docker containers:
+
+```bash
+# Regular user - limited info
+apps-ports -p 8080
+# Output: "elevated privileges required"
+
+# With sudo - full Docker info
+sudo apps-ports -p 8080 --simple
+# Output: "8080:363030 docker-proxy (/usr/bin/docker-proxy...) [🐳 82fee02d]"
+```
+
 ## How it works
 
-The tool uses both `netstat` and `lsof` commands to comprehensively find processes using network ports. It provides detailed information including:
+The tool uses `ss`, `netstat`, and `lsof` commands to comprehensively find processes using network ports. It provides detailed information including:
 
 - Port number
-- Process ID (PID)
+- Process ID (PID) 
 - Process name
 - Full command line
+- Docker container ID and image (when applicable)
 
 ## Requirements
 
 - Linux or macOS (Windows support coming soon)
-- `netstat` command (usually pre-installed)
+- `ss` or `netstat` command (usually pre-installed)
 - `lsof` command (usually pre-installed)
+- `docker` command (optional, for Docker container detection)
 
 ## License
 

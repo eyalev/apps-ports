@@ -1,9 +1,9 @@
 use clap::{Arg, Command, ArgAction};
 use std::process::{Command as StdCommand, Stdio};
 use std::io::{self, Write};
-use tabled::{Table, Tabled};
+use tabled::{Table, Tabled, settings::{Width, Settings, Modify, object::Columns}};
 
-#[derive(Tabled)]
+#[derive(Tabled, serde::Serialize)]
 struct ProcessInfo {
     port: String,
     pid: String,
@@ -46,17 +46,42 @@ fn main() {
                 .action(ArgAction::SetTrue)
                 .help("When used with -k, kill Docker container instead of just the process")
         )
+        .arg(
+            Arg::new("compact")
+                .short('c')
+                .long("compact")
+                .action(ArgAction::SetTrue)
+                .help("Compact output format")
+        )
+        .arg(
+            Arg::new("simple")
+                .short('s')
+                .long("simple")
+                .action(ArgAction::SetTrue)
+                .help("Simple one-line format")
+        )
+        .arg(
+            Arg::new("json")
+                .short('j')
+                .long("json")
+                .action(ArgAction::SetTrue)
+                .help("Output in JSON format")
+        )
         .get_matches();
 
+    let compact = matches.get_flag("compact");
+    let simple = matches.get_flag("simple");
+    let json_output = matches.get_flag("json");
+    
     if let Some(port) = matches.get_one::<String>("kill") {
         let kill_docker = matches.get_flag("kill_docker_container");
         kill_process_by_port(port, kill_docker);
     } else if let Some(port) = matches.get_one::<String>("port") {
-        show_process_by_port(port);
+        show_process_by_port(port, compact, simple, json_output);
     } else if matches.get_flag("list") {
-        list_all_processes();
+        list_all_processes(compact, simple, json_output);
     } else {
-        list_all_processes();
+        list_all_processes(compact, simple, json_output);
     }
 }
 
@@ -217,7 +242,7 @@ fn create_process_info(port: String, pid: String, process_name: String, command:
     }
 }
 
-fn list_all_processes() {
+fn list_all_processes(compact: bool, simple: bool, json_output: bool) {
     let processes = get_processes_using_ports();
     
     if processes.is_empty() {
@@ -225,11 +250,10 @@ fn list_all_processes() {
         return;
     }
 
-    let table = Table::new(processes);
-    println!("{}", table);
+    display_processes(&processes, compact, simple, json_output);
 }
 
-fn show_process_by_port(port: &str) {
+fn show_process_by_port(port: &str, compact: bool, simple: bool, json_output: bool) {
     let processes = get_processes_using_ports();
     let filtered: Vec<_> = processes.into_iter()
         .filter(|p| p.port == port)
@@ -240,8 +264,92 @@ fn show_process_by_port(port: &str) {
         return;
     }
 
-    let table = Table::new(filtered);
+    display_processes(&filtered, compact, simple, json_output);
+}
+
+fn display_processes(processes: &[ProcessInfo], compact: bool, simple: bool, json_output: bool) {
+    if json_output {
+        match serde_json::to_string_pretty(processes) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing to JSON: {}", e),
+        }
+        return;
+    }
+    
+    if simple {
+        display_simple_format(processes);
+    } else if compact {
+        display_compact_format(processes);
+    } else {
+        display_table_format(processes);
+    }
+}
+
+fn display_simple_format(processes: &[ProcessInfo]) {
+    for process in processes {
+        let docker_info = if !process.docker_container_id.is_empty() {
+            format!(" [🐳 {}]", truncate_string(&process.docker_container_id, 8))
+        } else {
+            "".to_string()
+        };
+        
+        println!("{}:{} {} ({}){}", 
+            process.port, 
+            process.pid, 
+            truncate_string(&process.process_name, 15),
+            truncate_string(&process.command, 50),
+            docker_info
+        );
+    }
+}
+
+fn display_compact_format(processes: &[ProcessInfo]) {
+    for process in processes {
+        println!("Port: {}", process.port);
+        println!("  PID: {}", process.pid);
+        println!("  Process: {}", process.process_name);
+        if !process.docker_container_id.is_empty() {
+            println!("  Docker ID: {}", truncate_string(&process.docker_container_id, 12));
+            println!("  Docker Image: {}", process.docker_image);
+        }
+        println!("  Command: {}", truncate_string(&process.command, 80));
+        println!();
+    }
+}
+
+fn display_table_format(processes: &[ProcessInfo]) {
+    // Create a version with truncated data for better table display
+    let truncated_processes: Vec<ProcessInfo> = processes.iter().map(|p| ProcessInfo {
+        port: p.port.clone(),
+        pid: truncate_string(&p.pid, 8),
+        process_name: truncate_string(&p.process_name, 12),
+        command: truncate_string(&p.command, 40),
+        docker_container_id: if !p.docker_container_id.is_empty() {
+            truncate_string(&p.docker_container_id, 12)
+        } else {
+            "".to_string()
+        },
+        docker_image: truncate_string(&p.docker_image, 20),
+    }).collect();
+    
+    let mut table = Table::new(truncated_processes);
+    table.with(Settings::default()
+        .with(Modify::new(Columns::single(0)).with(Width::wrap(6)))   // port
+        .with(Modify::new(Columns::single(1)).with(Width::wrap(8)))   // pid
+        .with(Modify::new(Columns::single(2)).with(Width::wrap(12)))  // process_name
+        .with(Modify::new(Columns::single(3)).with(Width::wrap(40)))  // command
+        .with(Modify::new(Columns::single(4)).with(Width::wrap(12)))  // docker_id
+        .with(Modify::new(Columns::single(5)).with(Width::wrap(20)))  // docker_image
+    );
     println!("{}", table);
+}
+
+fn truncate_string(s: &str, max_len: usize) -> String {
+    if s.len() <= max_len {
+        s.to_string()
+    } else {
+        format!("{}...", &s[..max_len.saturating_sub(3)])
+    }
 }
 
 fn kill_process_by_port(port: &str, kill_docker: bool) {
